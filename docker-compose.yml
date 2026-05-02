@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  app:
+    image: php:8.3-fpm
+    container_name: weather_app
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    depends_on:
+      - db
+
+  webserver:
+    image: nginx:alpine
+    container_name: weather_nginx
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx:/etc/nginx/conf.d
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    container_name: weather_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: weather_app
+    ports:
+      - "3307:3306"
