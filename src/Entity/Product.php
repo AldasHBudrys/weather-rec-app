@@ -85,7 +85,10 @@ class Product
 
     public function getTags(): array
     {
-        return $this->tags;
+        return array_map(
+            fn(string $tag) => WeatherTag::from($tag),
+            $this->tags
+        );
     }
 
     public function setTagsFromEnums(array $tags): static
