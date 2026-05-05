@@ -20,15 +20,25 @@ class LhmtWeatherService
 
     public function getCurrentWeather(string $city): array
     {
-        $cacheKey = 'weather_' . strtolower($city);
+        $city = strtolower($city);
+
+        $cacheKey = 'weather_' . $city;
 
         return $this->cache->get($cacheKey, function (ItemInterface $item) use ($city) {
             $item->expiresAfter(300);
 
             $response = $this->client->request(
                 'GET',
-                self::BASE_URL . '/' . strtolower($city) . '/forecasts/long-term'
+                self::BASE_URL . '/' . $city . '/forecasts/long-term'
             );
+
+            if ($response->getStatusCode() === 404) {
+                throw new \InvalidArgumentException('Invalid city provided');
+            }
+
+            if ($response->getStatusCode() >= 400) {
+                throw new \RuntimeException('Weather service unavailable');
+            }
 
             $data = $response->toArray();
 

@@ -17,6 +17,10 @@ class RecommendationService
     {
         $weather = $this->weatherService->getCurrentWeather($city);
 
+        if (!isset($weather['weatherTags']) || !is_array($weather['weatherTags'])) {
+            throw new \RuntimeException('Invalid weather data received');
+        }
+
         $tags = $weather['weatherTags'];
 
         $products = $this->productRepository->findByWeatherTags($tags);
