@@ -113,6 +113,20 @@ class ProductFixture extends Fixture
                 'sku' => 'Skg-12',
                 'tags' => [WeatherTag::SNOW, WeatherTag::CLEAR],
             ],
+            [
+                'name' => 'Hoodie',
+                'category' => 'clothing',
+                'price' => 80.00,
+                'sku' => 'Hod-13',
+                'tags' => [WeatherTag::MILD],
+            ],
+            [
+                'name' => 'Light Jacket',
+                'category' => 'clothing',
+                'price' => 150.00,
+                'sku' => 'Lij-14',
+                'tags' => [WeatherTag::MILD],
+            ],
         ];
     }
 }

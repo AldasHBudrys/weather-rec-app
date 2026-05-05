@@ -20,27 +20,28 @@ class LhmtWeatherService
 
     public function getCurrentWeather(string $city): array
     {
-        $city = strtolower($city);
-
-        $cacheKey = 'weather_' . $city;
+        $cacheKey = 'weather_' . strtolower($city);
 
         return $this->cache->get($cacheKey, function (ItemInterface $item) use ($city) {
             $item->expiresAfter(300);
 
-            $response = $this->client->request(
-                'GET',
-                self::BASE_URL . '/' . $city . '/forecasts/long-term'
-            );
+            try {
+                $response = $this->client->request(
+                    'GET',
+                    self::BASE_URL . '/' . strtolower($city) . '/forecasts/long-term'
+                );
 
-            if ($response->getStatusCode() === 404) {
-                throw new \InvalidArgumentException('Invalid city provided');
+                if ($response->getStatusCode() !== 200) {
+                    throw new \RuntimeException('Invalid city or API error: ' . $city);
+                }
+
+                $data = $response->toArray(false);
+
+            } catch (\Throwable $e) {
+                throw new \RuntimeException(
+                    'Weather service failed: ' . $e->getMessage()
+                );
             }
-
-            if ($response->getStatusCode() >= 400) {
-                throw new \RuntimeException('Weather service unavailable');
-            }
-
-            $data = $response->toArray();
 
             return $this->normalize($data);
         });
@@ -48,40 +49,68 @@ class LhmtWeatherService
 
     private function normalize(array $data): array
     {
-        if (!isset($data['forecastTimestamps']) || empty($data['forecastTimestamps'])) {
+        if (empty($data['forecastTimestamps'])) {
             throw new \RuntimeException('No weather data available');
         }
 
-        $current = $data['forecastTimestamps'][0];
+        $seenDates = [];
+        $forecasts = [];
 
-        $temperature = $current['airTemperature'] ?? null;
-        $windSpeed = $current['windSpeed'] ?? null;
+        foreach ($data['forecastTimestamps'] as $forecast) {
 
-        $tags = [];
+            if (!isset($forecast['forecastTimeUtc'])) {
+                continue;
+            }
 
-        $tags[] = $this->mapper->map($current['conditionCode']);
+            $date = substr($forecast['forecastTimeUtc'], 0, 10);
 
-        if ($temperature !== null && $temperature >= 20) {
-            $tags[] = WeatherTag::HOT;
-        } elseif ($temperature !== null && $temperature <= 5) {
-            $tags[] = WeatherTag::COLD;
+            if (isset($seenDates[$date])) {
+                continue;
+            }
+
+            $seenDates[$date] = true;
+            $forecasts[] = $forecast;
+
+            if (count($forecasts) === 3) {
+                break;
+            }
         }
 
-        if ($windSpeed !== null && $windSpeed >= 10) {
-            $tags[] = WeatherTag::WIND;
-        }
+        $days = [];
 
-        $tags = array_values(array_unique(
-            array_map(fn($tag) => $tag->value, $tags)
-        ));
+        foreach ($forecasts as $forecast) {
+            $temperature = $forecast['airTemperature'] ?? null;
+            $windSpeed = $forecast['windSpeed'] ?? null;
+
+            $tags = [];
+
+            $tags[] = $this->mapper->map($forecast['conditionCode']);
+
+            if ($temperature !== null && $temperature >= 20) {
+                $tags[] = WeatherTag::HOT;
+            } elseif ($temperature !== null && $temperature <= 5) {
+                $tags[] = WeatherTag::COLD;
+            } else {
+                $tags[] = WeatherTag::MILD;
+            }
+
+
+            $tags = array_values(array_unique(
+                array_map(fn($tag) => $tag->value, $tags)
+            ));
+
+            $days[] = [
+                'time' => $forecast['forecastTimeUtc'] ?? null,
+                'temperature' => $temperature,
+                'windSpeed' => $windSpeed,
+                'condition' => $forecast['conditionCode'] ?? null,
+                'weatherTags' => $tags,
+            ];
+        }
 
         return [
             'city' => $data['place']['name'] ?? null,
-            'temperature' => $temperature,
-            'windSpeed' => $windSpeed,
-            'condition' => $current['conditionCode'] ?? null,
-            'weatherTags' => $tags,
-            'time' => $current['forecastTimeUtc'] ?? null,
+            'days' => $days,
             'source' => 'LHMT',
         ];
     }

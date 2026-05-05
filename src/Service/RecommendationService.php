@@ -2,8 +2,8 @@
 
 namespace App\Service;
 
-use App\DTO\RecommendationResponseDTO;
 use App\Repository\ProductRepository;
+use App\DTO\RecommendationResponseDTO;
 
 class RecommendationService
 {
@@ -17,24 +17,41 @@ class RecommendationService
     {
         $weather = $this->weatherService->getCurrentWeather($city);
 
-        if (!isset($weather['weatherTags']) || !is_array($weather['weatherTags'])) {
-            throw new \RuntimeException('Invalid weather data received');
+        $days = $weather['days'] ?? [];
+
+        if (!is_array($days)) {
+            $days = [];
         }
 
-        $tags = $weather['weatherTags'];
+        $daily = [];
 
-        $products = $this->productRepository->findByWeatherTags($tags);
+        foreach ($days as $day) {
+
+            $time = $day['time'] ?? null;
+            $tags = $day['weatherTags'] ?? [];
+
+            if (!is_array($tags)) {
+                $tags = [];
+            }
+
+            $products = $this->productRepository->findByWeatherTags($tags);
+
+            $daily[] = [
+                'time' => $time,
+                'weatherTags' => $tags,
+                'products' => array_map(fn($product) => [
+                    'name' => $product->getName(),
+                    'category' => $product->getCategory(),
+                    'price' => $product->getPrice(),
+                    'sku' => $product->getSku(),
+                ], $products),
+            ];
+        }
 
         return new RecommendationResponseDTO(
-            $weather['city'],
-            $tags,
-            array_map(fn($product) => [
-                'name' => $product->getName(),
-                'category' => $product->getCategory(),
-                'price' => $product->getPrice(),
-                'sku' => $product->getSku(),
-            ], $products),
-            $weather['source']
+            $weather['city'] ?? $city,
+            $daily,
+            $weather['source'] ?? 'LHMT'
         );
     }
 }

@@ -86,7 +86,7 @@ class Product
     public function getTags(): array
     {
         return array_map(
-            fn($tag) => $tag instanceof \App\Enum\WeatherTag
+            fn($tag) => $tag instanceof WeatherTag
             ? $tag->value
             : $tag,
             $this->tags

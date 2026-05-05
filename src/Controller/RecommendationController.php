@@ -17,8 +17,25 @@ class RecommendationController extends AbstractController
     ): JsonResponse {
         $city = $request->query->get('city', 'kaunas');
 
-        return $this->json(
-            $service->recommend($city)
-        );
+        try {
+            $result = $service->recommend($city);
+
+            return $this->json([
+                'city' => $result->city,
+                'days' => $result->days,
+                'source' => $result->source,
+            ]);
+
+        } catch (\InvalidArgumentException $e) {
+            return $this->json([
+                'error' => $e->getMessage()
+            ], 400);
+
+        } catch (\Throwable $e) {
+            return $this->json([
+                'error' => $e->getMessage(),
+                'type' => get_class($e)
+            ], 500);
+        }
     }
 }
