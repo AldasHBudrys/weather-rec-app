@@ -29,3 +29,6 @@ docker compose exec app php bin/phpunit
 
 # Example Request
 curl "http://localhost:8000/api/recommendations?city=kaunas"
+
+API used: https://api.meteo.lt/
+duomenų šaltinis yra LHMT
