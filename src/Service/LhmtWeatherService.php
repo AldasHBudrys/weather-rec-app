@@ -12,7 +12,8 @@ class LhmtWeatherService
 
     public function __construct(
         private HttpClientInterface $client,
-        private CacheInterface $cache
+        private CacheInterface $cache,
+        private WeatherTagMapperService $mapper
     ) {
     }
 
@@ -47,8 +48,9 @@ class LhmtWeatherService
             'temperature' => $current['airTemperature'] ?? null,
             'windSpeed' => $current['windSpeed'] ?? null,
             'condition' => $current['conditionCode'] ?? null,
+            'weatherTag' => $this->mapper->map($current['conditionCode']),
             'time' => $current['forecastTimeUtc'] ?? null,
-            'source' => 'LHMT'
+            'source' => 'LHMT',
         ];
     }
 }

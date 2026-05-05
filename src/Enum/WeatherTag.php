@@ -10,4 +10,5 @@ enum WeatherTag: string
     case SNOW = 'snow';
     case WIND = 'wind';
     case CLEAR = 'clear';
+    case CLOUDY = 'cloudy';
 }
