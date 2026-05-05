@@ -9,22 +9,25 @@ use PHPUnit\Framework\TestCase;
 
 class RecommendationServiceTest extends TestCase
 {
-    public function testRecommendReturnsDtoStructure(): void
+    public function testRecommendReturnsCorrectResult(): void
     {
         $weatherService = $this->createMock(LhmtWeatherService::class);
         $productRepo = $this->createMock(ProductRepository::class);
 
-        $weatherService->expects($this->once())
-            ->method('getCurrentWeather')
+        $weatherService->method('getCurrentWeather')
             ->with('kaunas')
             ->willReturn([
                 'city' => 'Kaunas',
-                'weatherTags' => ['hot'],
+                'days' => [
+                    [
+                        'time' => '2026-01-01T10:00:00Z',
+                        'weatherTags' => ['hot']
+                    ]
+                ],
                 'source' => 'LHMT'
             ]);
 
-        $productRepo->expects($this->once())
-            ->method('findByWeatherTags')
+        $productRepo->method('findByWeatherTags')
             ->with(['hot'])
             ->willReturn([]);
 
@@ -32,9 +35,17 @@ class RecommendationServiceTest extends TestCase
 
         $result = $service->recommend('kaunas');
 
+        // DTO access (NOT array)
         $this->assertEquals('Kaunas', $result->city);
-        $this->assertEquals(['hot'], $result->weatherForecast);
-        $this->assertEquals([], $result->products);
+
+        $this->assertEquals([
+            [
+                'time' => '2026-01-01T10:00:00Z',
+                'weatherTags' => ['hot'],
+                'products' => []
+            ]
+        ], $result->days);
+
         $this->assertEquals('LHMT', $result->source);
     }
 
@@ -43,8 +54,7 @@ class RecommendationServiceTest extends TestCase
         $weatherService = $this->createMock(LhmtWeatherService::class);
         $productRepo = $this->createMock(ProductRepository::class);
 
-        $weatherService->expects($this->once())
-            ->method('getCurrentWeather')
+        $weatherService->method('getCurrentWeather')
             ->with('wrongcity')
             ->willThrowException(
                 new \InvalidArgumentException('Invalid city provided')

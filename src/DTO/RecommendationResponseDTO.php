@@ -6,8 +6,7 @@ class RecommendationResponseDTO
 {
     public function __construct(
         public string $city,
-        public array $weatherForecast,
-        public array $products,
+        public array $days,
         public string $source
     ) {
     }
