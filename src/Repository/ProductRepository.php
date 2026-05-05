@@ -6,9 +6,6 @@ use App\Entity\Product;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * @extends ServiceEntityRepository<Product>
- */
 class ProductRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -16,28 +13,29 @@ class ProductRepository extends ServiceEntityRepository
         parent::__construct($registry, Product::class);
     }
 
-    //    /**
-    //     * @return Product[] Returns an array of Product objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('p.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function findByWeatherTags(array $tags): array
+    {
+        $results = [];
 
-    //    public function findOneBySomeField($value): ?Product
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        foreach ($this->findAll() as $product) {
+
+            $productTags = $product->getTags();
+            $tagCount = count($productTags);
+
+            if ($tagCount === 1) {
+                if (in_array($productTags[0], $tags, true)) {
+                    $results[] = $product;
+                }
+                continue;
+            }
+
+            $matchesAll = count(array_intersect($productTags, $tags)) === $tagCount;
+
+            if ($matchesAll) {
+                $results[] = $product;
+            }
+        }
+
+        return array_slice($results, 0, 2);
+    }
 }

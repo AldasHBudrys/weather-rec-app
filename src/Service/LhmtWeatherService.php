@@ -2,9 +2,10 @@
 
 namespace App\Service;
 
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Enum\WeatherTag;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class LhmtWeatherService
 {
@@ -43,12 +44,33 @@ class LhmtWeatherService
 
         $current = $data['forecastTimestamps'][0];
 
+        $temperature = $current['airTemperature'] ?? null;
+        $windSpeed = $current['windSpeed'] ?? null;
+
+        $tags = [];
+
+        $tags[] = $this->mapper->map($current['conditionCode']);
+
+        if ($temperature !== null && $temperature >= 20) {
+            $tags[] = WeatherTag::HOT;
+        } elseif ($temperature !== null && $temperature <= 5) {
+            $tags[] = WeatherTag::COLD;
+        }
+
+        if ($windSpeed !== null && $windSpeed >= 10) {
+            $tags[] = WeatherTag::WIND;
+        }
+
+        $tags = array_values(array_unique(
+            array_map(fn($tag) => $tag->value, $tags)
+        ));
+
         return [
             'city' => $data['place']['name'] ?? null,
-            'temperature' => $current['airTemperature'] ?? null,
-            'windSpeed' => $current['windSpeed'] ?? null,
+            'temperature' => $temperature,
+            'windSpeed' => $windSpeed,
             'condition' => $current['conditionCode'] ?? null,
-            'weatherTag' => $this->mapper->map($current['conditionCode']),
+            'weatherTags' => $tags,
             'time' => $current['forecastTimeUtc'] ?? null,
             'source' => 'LHMT',
         ];
